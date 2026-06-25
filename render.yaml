@@ -1,0 +1,28 @@
+services:
+  # 1. The FastAPI Backend
+  - type: web
+    name: digital-risk-api
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set manually in Render dashboard to your Neon DB URL
+      - key: MAX_AMOUNT_PER_TRANSACTION
+        value: 100000000
+      - key: MIN_AMOUNT_PER_TRANSACTION
+        value: 1
+      - key: RATE_LIMIT_TRANSACTIONS_PER_MINUTE
+        value: 10
+      - key: ALLOWED_ORIGINS
+        value: '["*"]' 
+
+  # 2. The Static HTML Frontend
+  - type: web
+    name: digital-risk-frontend
+    env: static
+    rootDir: frontend
+    # No build command needed for plain HTML/JS
+    buildCommand: ""
+    staticPublishPath: ./

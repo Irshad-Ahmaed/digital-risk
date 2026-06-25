@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Risk - Transaction Platform</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+            --radius: 12px;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        
+        h1, h2 { font-weight: 600; margin-bottom: 1rem; color: #fff; }
+        h1 { text-align: center; font-size: 2.5rem; margin-bottom: 2rem; 
+             background: linear-gradient(to right, #60a5fa, #a78bfa);
+             -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+             
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1200px; margin: 0 auto; }
+        
+        .panel {
+            background-color: var(--panel-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+        }
+
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: var(--primary); }
+        
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        
+        .btn-secondary { background-color: var(--border); color: var(--text-color); }
+        .btn-secondary:hover { background-color: #475569; }
+
+        .response-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #000;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #10b981;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 80px;
+        }
+        .response-error { color: #ef4444; }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value { font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem; }
+        .stat-value.credit { color: var(--success); }
+        .stat-value.debit { color: var(--danger); }
+        .stat-value.balance { color: var(--primary); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; }
+        tbody tr:hover { background-color: rgba(255,255,255,0.02); }
+        
+        .rank-1 { color: #fbbf24; font-weight: bold; } /* Gold */
+        .rank-2 { color: #94a3b8; font-weight: bold; } /* Silver */
+        .rank-3 { color: #b45309; font-weight: bold; } /* Bronze */
+
+        .uuid-group { display: flex; gap: 0.5rem; }
+        .uuid-group button { width: auto; padding: 0.75rem 1rem; }
+    </style>
+</head>
+<body>
+
+    <h1>Digital Risk Transactions</h1>
+
+    <div class="grid">
+        <!-- Transaction Panel -->
+        <div class="panel">
+            <h2>Submit Transaction</h2>
+            <form id="txForm">
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" id="txUserId" placeholder="e.g., alice_123" required>
+                </div>
+                <div class="form-group">
+                    <label>Transaction ID (Idempotency Key)</label>
+                    <div class="uuid-group">
+                        <input type="text" id="txId" required readonly>
+                        <button type="button" class="btn-secondary" onclick="generateUUID()">New UUID</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="txType">
+                        <option value="credit">Credit (Deposit)</option>
+                        <option value="debit">Debit (Withdrawal)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount (in dollars)</label>
+                    <input type="number" id="txAmount" min="0.01" step="0.01" value="100.00" required>
+                </div>
+                <div class="uuid-group" style="margin-top: 1rem;">
+                    <button type="submit">Submit</button>
+                    <!-- Demo button to resubmit SAME transaction -->
+                    <button type="button" class="btn-secondary" onclick="resubmitDuplicate()" title="Submit same ID again to test idempotency">Resubmit (Test Idempotency)</button>
+                </div>
+            </form>
+            <div id="txResponse" class="response-box">Awaiting submission...</div>
+        </div>
+
+        <!-- Summary Panel -->
+        <div class="panel">
+            <h2>User Summary</h2>
+            <div class="uuid-group" style="margin-bottom: 1rem;">
+                <input type="text" id="summaryUserId" placeholder="Enter User ID">
+                <button type="button" onclick="fetchSummary()">Fetch Summary</button>
+            </div>
+            
+            <div class="stat-grid" id="summaryGrid" style="display: none;">
+                <div class="stat-card">
+                    <div style="font-size: 0.9rem; color: #94a3b8;">Balance</div>
+                    <div class="stat-value balance" id="sumBalance">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.9rem; color: #94a3b8;">Tx Count</div>
+                    <div class="stat-value" id="sumCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.9rem; color: #94a3b8;">Total Credits</div>
+                    <div class="stat-value credit" id="sumCredits">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.9rem; color: #94a3b8;">Total Debits</div>
+                    <div class="stat-value debit" id="sumDebits">$0.00</div>
+                </div>
+            </div>
+            <div id="summaryResponse" class="response-box" style="margin-top: 1rem;">Awaiting lookup...</div>
+        </div>
+        
+        <!-- Ranking Panel (Spans full width) -->
+        <div class="panel" style="grid-column: 1 / -1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Global Leaderboard</h2>
+                <button type="button" onclick="fetchRanking()" style="width: auto;">Refresh Rankings</button>
+            </div>
+            
+            <table id="rankingTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>User</th>
+                        <th>Score</th>
+                        <th>Balance</th>
+                        <th>Tx Count</th>
+                        <th>Active Days</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Click refresh to load rankings</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        // Generate UUID v4
+        function generateUUID() {
+            const uuid = crypto.randomUUID();
+            document.getElementById('txId').value = uuid;
+        }
+        
+        // Initialize with a UUID
+        generateUUID();
+
+        function formatMoney(cents) {
+            return '$' + (cents / 100).toFixed(2);
+        }
+
+        async function submitTransaction(isResubmit = false) {
+            const responseBox = document.getElementById('txResponse');
+            responseBox.className = 'response-box';
+            responseBox.innerText = 'Processing...';
+
+            const payload = {
+                user_id: document.getElementById('txUserId').value,
+                transaction_id: document.getElementById('txId').value,
+                type: document.getElementById('txType').value,
+                // Convert dollars to cents for backend
+                amount: Math.round(parseFloat(document.getElementById('txAmount').value) * 100)
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    responseBox.className = 'response-box response-error';
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                } else {
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                    if (!isResubmit) {
+                        // Generate new UUID for next transaction
+                        generateUUID();
+                    }
+                    // Auto refresh summary and rankings
+                    document.getElementById('summaryUserId').value = payload.user_id;
+                    fetchSummary();
+                    fetchRanking();
+                }
+            } catch (err) {
+                responseBox.className = 'response-box response-error';
+                responseBox.innerText = "Network error: Make sure backend is running on " + API_URL;
+            }
+        }
+
+        document.getElementById('txForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitTransaction(false);
+        });
+
+        function resubmitDuplicate() {
+            // Keep the same ID and submit
+            submitTransaction(true);
+        }
+
+        async function fetchSummary() {
+            const userId = document.getElementById('summaryUserId').value;
+            if (!userId) return;
+
+            const responseBox = document.getElementById('summaryResponse');
+            const grid = document.getElementById('summaryGrid');
+            responseBox.className = 'response-box';
+            responseBox.innerText = 'Fetching...';
+
+            try {
+                const res = await fetch(`${API_URL}/summary/${userId}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    grid.style.display = 'none';
+                    responseBox.className = 'response-box response-error';
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                } else {
+                    responseBox.innerText = JSON.stringify(data, null, 2);
+                    grid.style.display = 'grid';
+                    document.getElementById('sumBalance').innerText = formatMoney(data.balance);
+                    document.getElementById('sumCount').innerText = data.transaction_count;
+                    document.getElementById('sumCredits').innerText = formatMoney(data.total_credits);
+                    document.getElementById('sumDebits').innerText = formatMoney(data.total_debits);
+                }
+            } catch (err) {
+                grid.style.display = 'none';
+                responseBox.className = 'response-box response-error';
+                responseBox.innerText = "Network error.";
+            }
+        }
+
+        async function fetchRanking() {
+            const tbody = document.querySelector('#rankingTable tbody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Loading...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_URL}/ranking`);
+                const data = await res.json();
+                
+                if (!data.ranking || data.ranking.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8;">No users found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                data.ranking.forEach(user => {
+                    const tr = document.createElement('tr');
+                    
+                    let rankClass = '';
+                    if(user.rank === 1) rankClass = 'rank-1';
+                    else if(user.rank === 2) rankClass = 'rank-2';
+                    else if(user.rank === 3) rankClass = 'rank-3';
+
+                    tr.innerHTML = `
+                        <td class="${rankClass}">#${user.rank}</td>
+                        <td>${user.username}</td>
+                        <td title='${JSON.stringify(user.score_breakdown, null, 2)}' style="cursor:help; text-decoration:underline dotted;">
+                            ${user.score.toFixed(4)}
+                        </td>
+                        <td style="color: var(--primary)">${formatMoney(user.balance)}</td>
+                        <td>${user.transaction_count}</td>
+                        <td>${user.active_days}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Failed to load rankings</td></tr>';
+            }
+        }
+
+        // Initial fetch
+        fetchRanking();
+    </script>
+</body>
+</html>
