@@ -11,55 +11,42 @@ This project demonstrates strong API design, strict concurrency controls, a modu
 
 ---
 
-## How to Run Locally
+## Deployment Stack
 
-### 1. Database Setup
-You will need a PostgreSQL database. You can use a free tier on Neon, Supabase, or run it locally via Docker.
+This project is built to be easily deployed using modern serverless and cloud platforms:
+- **Backend API:** Render.
+- **Frontend Dashboard:** Vercel (Static Site), requiring zero build configuration.
+- **Database:** Neon PostgreSQL (Serverless Database).
 
-### 2. Backend Setup
+---
+
+## How to Run Locally (Development)
+
+### 1. Backend Setup
 ```bash
 cd backend
 python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
+# Windows: .\venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
 pip install -r requirements.txt
-
-# Copy env file and set your DATABASE_URL
-# Make sure to use the async driver format: postgresql+asyncpg://...
-cp .env.example .env
-```
-
-### 3. Start the Server
-```bash
+cp .env.example .env  # Add your local DATABASE_URL
 uvicorn app.main:app --reload
 ```
-The API will be available at `http://127.0.0.1:8000`.
-API documentation (Swagger UI) is automatically generated at `http://127.0.0.1:8000/docs`.
+API runs at `http://127.0.0.1:8000`.
 
-### 4. Run the Frontend
-There is no build step required for the frontend!
-Simply run a local HTTP server inside the `frontend/` directory (e.g., using Python) so that CORS is happy:
+### 2. Frontend Setup
+Run a local HTTP server in the frontend directory:
 ```bash
 cd frontend
 python -m http.server 3000
 ```
-Then navigate to `http://localhost:3000` in your browser. (Alternatively, use the VS Code "Live Server" extension).
+View at `http://localhost:3000`.
 
-### 5. Seeding Data (Optional)
-To populate the leaderboard with varied test data (whales, active users, new accounts):
+### 3. Seeding Data
+Populate the DB with test users and transactions:
 ```bash
 cd backend
 python seed.py
-```
-
-### 6. Run Tests
-A robust integration test (`test_smoke.py`) is provided. It hits the live database without needing a running server to test race conditions, debits, idempotency, and ranking logic natively.
-```bash
-cd backend
-python test_smoke.py
 ```
 
 ---
